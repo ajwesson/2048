@@ -4,7 +4,7 @@ function GameManager(size, InputManager, Actuator, ScoreManager) {
   this.scoreManager = new ScoreManager;
   this.actuator     = new Actuator;
 
-  this.startTiles   = 2;
+  this.startTiles   = 3;
 
   this.inputManager.on("move", this.move.bind(this));
   this.inputManager.on("restart", this.restart.bind(this));
@@ -124,24 +124,26 @@ GameManager.prototype.move = function (direction) {
       if (tile) {
         var positions = self.findFarthestPosition(cell, vector);
         var next      = self.grid.cellContent(positions.next);
-        var next2     = self.grid.cellContent(positions.next.next)
+        var nexter    = self.grid.cellContent(positions.nexter);
 
         // Only one merger per row traversal?
-        if (next && next.value === tile.value && !next.mergedFrom && next2 && next2.value === tile.value && !next2.mergedFrom) {
-          var merged = new Tile(positions.next, tile.value * 3);
+        if (next && next.value === tile.value && !next.mergedFrom && nexter && nexter.value === tile.value && !nexter.mergedFrom) {
+          var merged = new Tile(positions.nexter, tile.value * 3);
           merged.mergedFrom = [tile, next];
 
           self.grid.insertTile(merged);
           self.grid.removeTile(tile);
+          self.grid.removeTile(next);
 
           // Converge the two tiles' positions
-          tile.updatePosition(positions.next);
+          tile.updatePosition(positions.nexter);
+          next.updatePosition(positions.nexter);
 
           // Update the score
           self.score += merged.value;
 
-          // The mighty 2048 tile
-          if (merged.value === 243) self.won = true;
+          // The mighty 2187 tile
+          if (merged.value === 2187) self.won = true;
         } else {
           self.moveTile(tile, positions.farthest);
         }
@@ -202,10 +204,11 @@ GameManager.prototype.findFarthestPosition = function (cell, vector) {
     cell     = { x: previous.x + vector.x, y: previous.y + vector.y };
   } while (this.grid.withinBounds(cell) &&
            this.grid.cellAvailable(cell));
-
+  var v = { x: cell.x + vector.x, y: cell.y + vector.y };
   return {
     farthest: previous,
-    next: cell // Used to check if a merge is required
+    next: cell, // Used to check if a merge is required
+    nexter: v
   };
 };
 
@@ -227,10 +230,11 @@ GameManager.prototype.tileMatchesAvailable = function () {
         for (var direction = 0; direction < 4; direction++) {
           var vector = self.getVector(direction);
           var cell   = { x: x + vector.x, y: y + vector.y };
-
+          var cell2  = { x: cell.x + vector.x, y: cell.y + vector.y };
           var other  = self.grid.cellContent(cell);
+          var other2 = self.grid.cellContent(cell2);
 
-          if (other && other.value === tile.value) {
+          if (other && other.value === tile.value && other2 && other2.value === tile.value) {
             return true; // These two tiles can be merged
           }
         }
